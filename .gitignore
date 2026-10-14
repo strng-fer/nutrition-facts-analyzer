@@ -29,3 +29,6 @@ Thumbs.db
 *.tmp
 *.log
 .pytest_cache/
+
+# Github Instructions
+.github/
