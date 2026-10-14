@@ -2,40 +2,45 @@
 <html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sistem Ekstraksi Informasi Nilai Gizi : Portal Analisis Label Nutrisi</title>
-  <meta name="description" content="Portal ekstraksi dan digitalisasi informasi nilai gizi produk pangan secara otomatis menggunakan Computer Vision, OCR, dan AI terstruktur.">
+  <meta name="description" content="Portal pintar ekstraksi dan digitalisasi informasi nilai gizi produk kemasan secara langsung via kamera atau unggah foto menggunakan Computer Vision, OCR, dan AI.">
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>🥗</text></svg>">
 </head>
 <body>
 
-  <!-- Background Ambience with Nutrition Editorial Backdrop -->
+  <!-- Ambient Backdrop with Authentic Food Nutrition Photography -->
   <div class="nutrition-bg-overlay" aria-hidden="true"></div>
+  <div class="ambient-glow glow-emerald" aria-hidden="true"></div>
+  <div class="ambient-glow glow-amber" aria-hidden="true"></div>
 
   <div class="app-container">
 
     <!-- ═══════════════════════════════════════
-         INSTITUTIONAL HEADER / NAVBAR
+         TOP NAVBAR / BRAND HEADER
          ═══════════════════════════════════════ -->
     <header class="app-header" role="banner">
       <div class="brand-wrapper">
-        <div class="brand-icon" aria-hidden="true">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="brand-badge-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
             <path d="M12 6v6l4 2"/>
             <path d="M8 2.5a5 5 0 0 1 8 0"/>
           </svg>
         </div>
         <div class="brand-text-block">
-          <h1 class="brand-title">Sistem Ekstraksi Informasi Nilai Gizi</h1>
-          <p class="brand-tagline">Portal Analisis Label Nutrisi Pangan (Roboflow, PaddleOCR, Gemini Flash)</p>
+          <div class="brand-title-row">
+            <h1 class="brand-title">NutriScan Portal</h1>
+            <span class="brand-version-pill">v1.0 Vision</span>
+          </div>
+          <p class="brand-tagline">Ekstraksi Informasi Nilai Gizi Pangan : Roboflow, PaddleOCR, Gemini</p>
         </div>
       </div>
 
@@ -53,90 +58,183 @@
           <span id="themeLabel" class="theme-label">Tema Gelap</span>
         </button>
 
-        <!-- API Docs Navigation Link -->
+        <!-- API Documentation Link -->
         <a href="/docs" target="_blank" rel="noopener noreferrer" class="btn-header-link" title="Buka Dokumentasi Swagger API">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
-          <span>Dokumentasi API</span>
+          <span class="hide-mobile">Dokumentasi API</span>
         </a>
       </div>
     </header>
 
     <!-- ═══════════════════════════════════════
-         MAIN WORKSPACE (Split Grid)
+         MAIN WORKSPACE GRID
          ═══════════════════════════════════════ -->
     <main class="main-grid" role="main">
 
-      <!-- LEFT COLUMN: Input & Upload Workspace -->
-      <section class="portal-card input-panel" aria-labelledby="heading-upload">
+      <!-- LEFT COLUMN: Input Panel (Upload or Live Camera) -->
+      <section class="portal-card input-panel" aria-labelledby="heading-input">
+        
         <div class="panel-header">
           <div class="panel-header-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="heading-input" class="panel-title">Pindai Label Kemasan</h2>
+            <p class="panel-subtitle">Ambil foto langsung via kamera handphone atau pilih berkas foto.</p>
+          </div>
+        </div>
+
+        <!-- Mode Switcher Tabs: Upload vs Live Camera -->
+        <div class="input-mode-tabs" role="tablist" aria-label="Metode Pemindaian">
+          <button type="button" id="tabUploadMode" class="input-tab active" role="tab" aria-selected="true" aria-controls="uploadTabContent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-          </div>
-          <div>
-            <h2 id="heading-upload" class="panel-title">Unggah Label Kemasan</h2>
-            <p class="panel-subtitle">Pilih atau seret foto tabel Informasi Nilai Gizi produk pangan.</p>
-          </div>
-        </div>
-
-        <!-- Dropzone Area -->
-        <div id="uploadDropzone" class="upload-dropzone" role="button" tabindex="0" aria-label="Area seret atau klik untuk memilih file gambar kemasan">
-          <div class="upload-icon-wrapper" aria-hidden="true">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
+            <span>Unggah Berkas</span>
+          </button>
+          
+          <button type="button" id="tabCameraMode" class="input-tab" role="tab" aria-selected="false" aria-controls="cameraTabContent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
             </svg>
-          </div>
-          <div class="upload-heading">Seret gambar kemasan ke sini atau klik untuk memilih file</div>
-          <p class="upload-subtext">Mendukung tempel langsung dari papan klip (<kbd>Ctrl+V</kbd>)</p>
-          <div class="upload-badge-formats">
-            <span>Format: JPEG, PNG, WEBP</span>
-            <span class="badge-separator" aria-hidden="true">•</span>
-            <span>Maksimal 10 MB</span>
-          </div>
-          <input type="file" id="fileInput" class="hidden-file-input" accept="image/jpeg,image/png,image/webp" aria-hidden="true" tabindex="-1">
+            <span class="camera-tab-text">Kamera Langsung</span>
+            <span class="live-indicator-dot" aria-hidden="true"></span>
+          </button>
         </div>
 
-        <!-- Preview Container -->
+        <!-- TAB CONTENT 1: File Dropzone Area -->
+        <div id="uploadTabContent" class="tab-pane active" role="tabpanel" aria-labelledby="tabUploadMode">
+          <div id="uploadDropzone" class="upload-dropzone" role="button" tabindex="0" aria-label="Area seret atau klik untuk memilih file gambar kemasan">
+            <div class="upload-icon-wrapper" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </div>
+            <div class="upload-heading">Seret foto kemasan ke sini atau tap untuk memilih</div>
+            <p class="upload-subtext">Mendukung tempel langsung dari papan klip (<kbd>Ctrl+V</kbd>)</p>
+            <div class="upload-badge-formats">
+              <span>JPEG, PNG, WEBP</span>
+              <span class="badge-separator" aria-hidden="true">•</span>
+              <span>Maksimal 10 MB</span>
+            </div>
+            <input type="file" id="fileInput" class="hidden-file-input" accept="image/jpeg,image/png,image/webp" aria-hidden="true" tabindex="-1">
+          </div>
+        </div>
+
+        <!-- TAB CONTENT 2: Live Camera Viewfinder -->
+        <div id="cameraTabContent" class="tab-pane" role="tabpanel" aria-labelledby="tabCameraMode">
+          <div class="camera-viewport-card">
+            
+            <!-- Video Preview Stream -->
+            <div class="camera-stream-wrapper">
+              <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+              
+              <!-- Nutrition Table Target Guidance Frame -->
+              <div class="camera-guidance-frame" aria-hidden="true">
+                <div class="guide-corner tl"></div>
+                <div class="guide-corner tr"></div>
+                <div class="guide-corner bl"></div>
+                <div class="guide-corner br"></div>
+                <div class="guide-scan-laser"></div>
+                <span class="guide-tag">Area Label Informasi Nilai Gizi</span>
+              </div>
+
+              <!-- Camera Loading Spinner Overlay -->
+              <div id="cameraLoadingOverlay" class="camera-loading-overlay">
+                <div class="spinner-institutional"></div>
+                <span>Mengakses Kamera Perangkat...</span>
+              </div>
+
+              <!-- Camera Error Overlay -->
+              <div id="cameraErrorOverlay" class="camera-error-overlay" style="display: none;">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <div id="cameraErrorMessage" class="camera-error-text">Izin akses kamera tidak diberikan atau perangkat kamera tidak ditemukan.</div>
+                <button type="button" id="btnRetryCamera" class="btn-secondary btn-sm">Coba Lagi</button>
+              </div>
+            </div>
+
+            <!-- Camera Controls Bar -->
+            <div class="camera-action-bar">
+              <!-- Switch Front / Back Camera (Mobile friendly) -->
+              <button type="button" id="btnSwitchCamera" class="btn-camera-action" title="Ganti Kamera Depan/Belakang" aria-label="Ganti Kamera">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                <span class="cam-action-label">Putar</span>
+              </button>
+
+              <!-- Main Shutter Button -->
+              <button type="button" id="btnCapturePhoto" class="btn-shutter" title="Potret Label Sekarang" aria-label="Ambil Foto Label">
+                <div class="shutter-ring">
+                  <div class="shutter-core"></div>
+                </div>
+              </button>
+
+              <!-- Stop / Cancel Camera -->
+              <button type="button" id="btnCloseCamera" class="btn-camera-action" title="Matikan Kamera" aria-label="Matikan Kamera">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                </svg>
+                <span class="cam-action-label">Tutup</span>
+              </button>
+            </div>
+
+            <!-- Hidden Canvas for Frame Capture -->
+            <canvas id="cameraCanvas" class="hidden-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Selected Image Preview Container -->
         <div id="previewContainer" class="preview-container" aria-live="polite">
           <div class="preview-card">
             <div class="preview-header">
-              <span class="preview-status-pill">Gambar Terpilih</span>
-              <button type="button" id="btnRemovePreview" class="btn-remove-preview" title="Hapus gambar terpilih" aria-label="Hapus gambar terpilih">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <div class="preview-tag-group">
+                <span class="preview-status-pill">Foto Siap Dianalisis</span>
+                <span id="previewSourceBadge" class="preview-source-badge">Unggahan</span>
+              </div>
+              <button type="button" id="btnRemovePreview" class="btn-remove-preview" title="Hapus foto terpilih" aria-label="Hapus foto terpilih">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18"/>
                   <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
-                <span>Hapus</span>
+                <span>Ganti Foto</span>
               </button>
             </div>
             <div class="preview-image-wrapper">
-              <img id="previewImage" class="preview-image" alt="Pratinjau foto label nutrisi produk pangan">
+              <img id="previewImage" class="preview-image" alt="Pratinjau foto label nutrisi yang akan diekstrak">
             </div>
-            <div id="previewMeta" class="preview-meta">-</div>
+            <div id="previewMeta" class="preview-meta font-mono">-</div>
           </div>
         </div>
 
-        <!-- Primary Action Button -->
+        <!-- Primary Action Button (Desktop & Inline) -->
         <button type="button" id="btnExtract" class="btn-primary" disabled aria-label="Analisis dan Ekstrak Nilai Gizi">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
-          <span>Analisis & Ekstrak Nilai Gizi</span>
+          <span>Ekstrak Nilai Gizi Sekarang</span>
         </button>
 
         <!-- Pipeline Architecture Stages -->
         <div class="pipeline-card" aria-label="Tahapan Pemrosesan Pipeline AI">
           <div class="pipeline-card-header">
-            <h3 class="pipeline-card-title">Arsitektur Pipeline Pemrosesan</h3>
-            <span class="pipeline-step-badge">4 Tahapan Terverifikasi</span>
+            <h3 class="pipeline-card-title">Alur Kerja Ekstraksi Cerdas</h3>
+            <span class="pipeline-step-badge">4 Langkah Otomatis</span>
           </div>
           <ol class="pipeline-steps-list">
             <li id="step-detection" class="step-item">
@@ -149,22 +247,22 @@
             <li id="step-crop" class="step-item">
               <span class="step-num" aria-hidden="true">2</span>
               <div class="step-content">
-                <div class="step-name">Crop & Pra-pemrosesan Citra (OpenCV)</div>
-                <div class="step-desc">Pemotongan terarah dan normalisasi kontras adaptif</div>
+                <div class="step-name">Crop & Normalisasi Citra (OpenCV)</div>
+                <div class="step-desc">Pemotongan terarah dan penyesuaian kontras adaptif</div>
               </div>
             </li>
             <li id="step-ocr" class="step-item">
               <span class="step-num" aria-hidden="true">3</span>
               <div class="step-content">
                 <div class="step-name">Pembacaan Karakter Teks (PaddleOCR)</div>
-                <div class="step-desc">Ekstraksi data teks multibahasa (Indonesia & Inggris)</div>
+                <div class="step-desc">Ekstraksi teks multibahasa (Indonesia & Inggris)</div>
               </div>
             </li>
             <li id="step-llm" class="step-item">
               <span class="step-num" aria-hidden="true">4</span>
               <div class="step-content">
                 <div class="step-name">Restrukturisasi Nilai Gizi (Gemini Flash)</div>
-                <div class="step-desc">Validasi schema angka, normalisasi satuan, dan konversi ke JSON</div>
+                <div class="step-desc">Standardisasi angka, normalisasi satuan, dan konversi JSON</div>
               </div>
             </li>
           </ol>
@@ -177,7 +275,7 @@
         <!-- Empty State -->
         <div id="emptyState" class="empty-state" aria-live="polite">
           <div class="empty-icon-box" aria-hidden="true">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
@@ -185,26 +283,42 @@
               <polyline points="10 9 9 9 8 9"/>
             </svg>
           </div>
-          <h2 id="heading-results" class="empty-title">Belum Ada Label yang Dianalisis</h2>
+          <h2 id="heading-results" class="empty-title">Siap Mengekstrak Data Nutrisi</h2>
           <p class="empty-desc">
-            Silakan unggah foto label Informasi Nilai Gizi pada panel kiri, lalu tekan tombol <strong>"Analisis & Ekstrak Nilai Gizi"</strong> untuk memulai proses ekstraksi otomatis.
+            Ambil foto kemasan langsung via kamera smartphone atau unggah file foto label Informasi Nilai Gizi, lalu jalankan analisis.
           </p>
-          <div class="empty-hint-card">
-            <span class="empty-hint-title">Tips Kualitas Gambar:</span>
-            <ul class="empty-hint-list">
-              <li>Pastikan tabel nilai gizi terlihat tajam dan tidak blur</li>
-              <li>Hindari pantulan cahaya lampu yang menutupi teks angka</li>
-              <li>Teks bahasa Indonesia maupun bahasa Inggris didukung secara penuh</li>
-            </ul>
+          
+          <div class="quick-feature-grid">
+            <div class="quick-feature-item">
+              <div class="quick-feature-icon">📸</div>
+              <div class="quick-feature-text">
+                <strong>Foto Kamera Langsung</strong>
+                <span>Mendukung kamera belakang smartphone resolusi tinggi</span>
+              </div>
+            </div>
+            <div class="quick-feature-item">
+              <div class="quick-feature-icon">⚡</div>
+              <div class="quick-feature-text">
+                <strong>Ekstraksi Multibahasa</strong>
+                <span>Bahasa Indonesia (AKG) dan English (Daily Value)</span>
+              </div>
+            </div>
+            <div class="quick-feature-item">
+              <div class="quick-feature-icon">📋</div>
+              <div class="quick-feature-text">
+                <strong>Ekspor Terstandar</strong>
+                <span>Salin teks ringkasan atau unduh berkas JSON bersih</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Loading State -->
         <div id="loadingState" class="loading-state" aria-live="assertive">
           <div class="spinner-institutional" aria-hidden="true"></div>
-          <h2 class="loading-title">Sedang Menjalankan Pipeline Analisis Nutrisi</h2>
+          <h2 class="loading-title">Menganalisis Label Nilai Gizi</h2>
           <p class="loading-subtitle">
-            Sistem sedang mengeksekusi deteksi visual, OCR, dan penyusunan struktur data terstandar. Waktu rata-rata proses 8 hingga 20 detik.
+            Sistem sedang menjalankan deteksi area, pembacaan OCR, dan verifikasi struktur gizi via Gemini Flash.
           </p>
           <div class="loading-active-step" id="loadingStepIndicator">
             Tahap saat ini: Deteksi Area Tabel Kemasan...
@@ -214,7 +328,7 @@
         <!-- Results State -->
         <div id="resultsContainer" class="results-container" aria-live="polite">
           
-          <!-- Warning / Info Notification Banner -->
+          <!-- Warning / Notice Notification Banner -->
           <div id="warningBanner" class="alert-banner warning" style="display: none;" role="alert">
             <div class="alert-icon" aria-hidden="true">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -247,7 +361,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                <span>Tingkat Keyakinan OCR</span>
+                <span>Keyakinan OCR</span>
               </div>
               <div id="metricOcrConf" class="metric-value font-mono">-</div>
             </div>
@@ -257,7 +371,7 @@
                   <circle cx="11" cy="11" r="8"/>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <span>Keyakinan Deteksi Tabel</span>
+                <span>Keyakinan Deteksi</span>
               </div>
               <div id="metricDetConf" class="metric-value font-mono">-</div>
             </div>
@@ -267,7 +381,7 @@
           <div class="nutrition-hero-card" role="region" aria-label="Ringkasan Utama Nilai Gizi">
             <div class="hero-top-row">
               <div id="productNameTag" class="product-tag" style="display: none;">
-                <span class="product-tag-label">Produk Terdeteksi:</span>
+                <span class="product-tag-label">Produk:</span>
                 <span id="productNameText" class="product-tag-name">-</span>
               </div>
               <div class="nutrition-standard-badge">Standar BPOM & FDA</div>
@@ -277,17 +391,17 @@
               <div class="hero-stat-item">
                 <div class="hero-stat-label">Takaran Saji</div>
                 <div id="valServingSize" class="hero-stat-value font-mono">-</div>
-                <div class="hero-stat-sub">Ukuran porsi yang dianjurkan</div>
+                <div class="hero-stat-sub">Porsi anjuran konsumsi</div>
               </div>
               <div class="hero-stat-item">
-                <div class="hero-stat-label">Jumlah Sajian per Kemasan</div>
+                <div class="hero-stat-label">Jumlah Sajian</div>
                 <div id="valServingsPerPkg" class="hero-stat-value font-mono">-</div>
-                <div class="hero-stat-sub">Total sajian dalam 1 wadah</div>
+                <div class="hero-stat-sub">Sajian per kemasan wadah</div>
               </div>
               <div class="hero-stat-item calories-hero">
                 <div class="hero-stat-label">Energi Total (Kalori)</div>
                 <div id="valCalories" class="hero-stat-value font-mono calories-text">-</div>
-                <div class="hero-stat-sub">Kebutuhan energi per sajian</div>
+                <div class="hero-stat-sub">Kebutuhan kalori per sajian</div>
               </div>
             </div>
           </div>
@@ -295,7 +409,7 @@
           <!-- Structured Nutrients Table -->
           <div class="table-section" role="region" aria-label="Tabel Rincian Kandungan Gizi">
             <div class="table-toolbar">
-              <div>
+              <div class="table-title-group">
                 <h3 class="table-title">Rincian Kandungan Gizi</h3>
                 <p class="table-subtitle">Data nutrisi per sajian beserta persentase AKG harian.</p>
               </div>
@@ -304,7 +418,7 @@
                   <circle cx="11" cy="11" r="8"/>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" id="nutrientSearchInput" class="search-input" placeholder="Cari nutrisi (contoh: Lemak, Gula)..." aria-label="Cari nutrisi">
+                <input type="text" id="nutrientSearchInput" class="search-input" placeholder="Cari nutrisi (Lemak, Gula)..." aria-label="Cari nutrisi">
               </div>
             </div>
 
@@ -312,7 +426,7 @@
               <table class="nutrition-table" role="table">
                 <thead>
                   <tr role="row">
-                    <th scope="col" style="width: 44%;">Nama Kandungan Nutrisi</th>
+                    <th scope="col" style="width: 44%;">Nama Kandungan Gizi</th>
                     <th scope="col" style="width: 28%;">Jumlah per Sajian</th>
                     <th scope="col" style="width: 28%;">% AKG (% DV)</th>
                   </tr>
@@ -408,6 +522,20 @@
       </div>
     </footer>
 
+  </div>
+
+  <!-- Mobile Floating Action Bar (Sticky at bottom for 1-hand thumb tap on phones) -->
+  <div id="mobileFloatingBar" class="mobile-floating-bar" aria-hidden="true">
+    <div class="mobile-floating-info">
+      <span id="mobileFloatingThumb" class="mobile-floating-thumb">📷</span>
+      <span id="mobileFloatingText" class="mobile-floating-text">Foto siap diekstrak</span>
+    </div>
+    <button type="button" id="btnExtractMobile" class="btn-primary btn-mobile-action">
+      <span>Ekstrak Nutrisi</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Toast Notification Feedback -->

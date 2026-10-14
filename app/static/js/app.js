@@ -1,37 +1,66 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * SISTEM EKSTRAKSI INFORMASI NILAI GIZI : CLIENT CONTROLLER
- * Inspirasi & Standar: Portal Institusi & Kesehatan (Siyudis ITERA)
- * Kepatuhan Anti-Slop: Bebas Em Dash, Aksesibilitas Keyboard, State Resilience
+ * Fitur: Live Camera Capture, Mobile Floating Actions, Dual Themes
+ * Standar Kualitas: Anti-Slop Bebas Em Dash, Aksesibilitas Penuh
  * ═══════════════════════════════════════════════════════════════════════
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // DOM Elements
+  // ─── DOM ELEMENTS ───
+  // Input Switcher Tabs
+  const tabUploadMode = document.getElementById('tabUploadMode');
+  const tabCameraMode = document.getElementById('tabCameraMode');
+  const uploadTabContent = document.getElementById('uploadTabContent');
+  const cameraTabContent = document.getElementById('cameraTabContent');
+
+  // Upload Elements
   const dropzone = document.getElementById('uploadDropzone');
   const fileInput = document.getElementById('fileInput');
+
+  // Camera Elements
+  const cameraVideo = document.getElementById('cameraVideo');
+  const cameraCanvas = document.getElementById('cameraCanvas');
+  const btnCapturePhoto = document.getElementById('btnCapturePhoto');
+  const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+  const btnCloseCamera = document.getElementById('btnCloseCamera');
+  const cameraLoadingOverlay = document.getElementById('cameraLoadingOverlay');
+  const cameraErrorOverlay = document.getElementById('cameraErrorOverlay');
+  const cameraErrorMessage = document.getElementById('cameraErrorMessage');
+  const btnRetryCamera = document.getElementById('btnRetryCamera');
+
+  // Preview Elements
   const previewContainer = document.getElementById('previewContainer');
   const previewImage = document.getElementById('previewImage');
   const previewMeta = document.getElementById('previewMeta');
+  const previewSourceBadge = document.getElementById('previewSourceBadge');
   const btnRemovePreview = document.getElementById('btnRemovePreview');
-  const btnExtract = document.getElementById('btnExtract');
 
+  // Extraction Action Buttons
+  const btnExtract = document.getElementById('btnExtract');
+  const btnExtractMobile = document.getElementById('btnExtractMobile');
+  const mobileFloatingBar = document.getElementById('mobileFloatingBar');
+  const mobileFloatingText = document.getElementById('mobileFloatingText');
+
+  // States
   const emptyState = document.getElementById('emptyState');
   const loadingState = document.getElementById('loadingState');
   const loadingStepIndicator = document.getElementById('loadingStepIndicator');
   const resultsContainer = document.getElementById('resultsContainer');
 
+  // Header & Utilities
   const backendStatus = document.getElementById('backendStatus');
   const searchInput = document.getElementById('nutrientSearchInput');
   const toast = document.getElementById('toastNotification');
-
-  // Theme Elements
   const btnThemeToggle = document.getElementById('btnThemeToggle');
   const themeLabel = document.getElementById('themeLabel');
 
+  // State Variables
   let currentFile = null;
   let currentResult = null;
   let stepTimer = null;
+  let cameraStream = null;
+  let currentFacingMode = 'environment'; // Default rear camera for scanning packages
 
   // ═══════════════════════════════════════
   // 1. THEME MANAGEMENT (LIGHT / DARK)
@@ -41,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedTheme === 'light' || savedTheme === 'dark') {
       applyTheme(savedTheme);
     } else {
-      // Default to dark theme with option to switch
       applyTheme('dark');
     }
   }
@@ -87,7 +115,173 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(checkHealth, 15000);
 
   // ═══════════════════════════════════════
-  // 3. FILE SELECTION, DRAG & DROP, PASTE
+  // 3. TAB CONTROLLER (UPLOAD VS LIVE CAMERA)
+  // ═══════════════════════════════════════
+  function switchTab(mode) {
+    if (mode === 'camera') {
+      tabCameraMode.classList.add('active');
+      tabCameraMode.setAttribute('aria-selected', 'true');
+      tabUploadMode.classList.remove('active');
+      tabUploadMode.setAttribute('aria-selected', 'false');
+
+      cameraTabContent.classList.add('active');
+      uploadTabContent.classList.remove('active');
+
+      startCamera();
+    } else {
+      tabUploadMode.classList.add('active');
+      tabUploadMode.setAttribute('aria-selected', 'true');
+      tabCameraMode.classList.remove('active');
+      tabCameraMode.setAttribute('aria-selected', 'false');
+
+      uploadTabContent.classList.add('active');
+      cameraTabContent.classList.remove('active');
+
+      stopCamera();
+    }
+  }
+
+  if (tabUploadMode && tabCameraMode) {
+    tabUploadMode.addEventListener('click', () => switchTab('upload'));
+    tabCameraMode.addEventListener('click', () => switchTab('camera'));
+  }
+
+  // ═══════════════════════════════════════
+  // 4. LIVE CAMERA CAPTURE CONTROLLER
+  // ═══════════════════════════════════════
+  async function startCamera() {
+    stopCamera();
+    cameraLoadingOverlay.style.display = 'flex';
+    cameraErrorOverlay.style.display = 'none';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showCameraError('Peramban tidak mendukung akses kamera langsung. Silakan gunakan metode unggah berkas.');
+      return;
+    }
+
+    const constraints = {
+      video: {
+        facingMode: { ideal: currentFacingMode },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    };
+
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      cameraVideo.srcObject = cameraStream;
+      
+      cameraVideo.onloadedmetadata = () => {
+        cameraVideo.play();
+        cameraLoadingOverlay.style.display = 'none';
+      };
+    } catch (err) {
+      console.warn('Gagal mengakses kamera dengan ideal constraints, mencoba fallback:', err);
+      try {
+        // Fallback with simpler constraints
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        cameraVideo.srcObject = cameraStream;
+        cameraVideo.onloadedmetadata = () => {
+          cameraVideo.play();
+          cameraLoadingOverlay.style.display = 'none';
+        };
+      } catch (fallbackErr) {
+        console.error('Akses kamera ditolak:', fallbackErr);
+        let msg = 'Izin akses kamera tidak diberikan. Harap berikan izin akses kamera pada peramban Anda.';
+        if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
+          msg = 'Tidak ada perangkat kamera yang terdeteksi pada perangkat ini.';
+        } else if (fallbackErr.name === 'NotReadableError' || fallbackErr.name === 'TrackStartError') {
+          msg = 'Kamera sedang digunakan oleh aplikasi lain. Tutup aplikasi tersebut dan coba kembali.';
+        }
+        showCameraError(msg);
+      }
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    if (cameraVideo) {
+      cameraVideo.srcObject = null;
+    }
+    if (cameraLoadingOverlay) cameraLoadingOverlay.style.display = 'none';
+  }
+
+  function showCameraError(msg) {
+    if (cameraLoadingOverlay) cameraLoadingOverlay.style.display = 'none';
+    if (cameraErrorOverlay) {
+      cameraErrorOverlay.style.display = 'flex';
+      if (cameraErrorMessage) cameraErrorMessage.textContent = msg;
+    }
+  }
+
+  // Switch between front & rear cameras
+  if (btnSwitchCamera) {
+    btnSwitchCamera.addEventListener('click', () => {
+      currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+      showToast(`Mengalihkan ke kamera ${currentFacingMode === 'environment' ? 'belakang' : 'depan'}...`);
+      startCamera();
+    });
+  }
+
+  // Close / stop camera and back to upload tab
+  if (btnCloseCamera) {
+    btnCloseCamera.addEventListener('click', () => {
+      switchTab('upload');
+    });
+  }
+
+  // Retry camera
+  if (btnRetryCamera) {
+    btnRetryCamera.addEventListener('click', () => {
+      startCamera();
+    });
+  }
+
+  // Shutter button (Take picture)
+  if (btnCapturePhoto) {
+    btnCapturePhoto.addEventListener('click', () => {
+      if (!cameraStream || !cameraVideo.videoWidth) {
+        showToast('Kamera belum siap');
+        return;
+      }
+
+      // Haptic feedback if supported on mobile
+      if (navigator.vibrate) {
+        try { navigator.vibrate(40); } catch { /* Ignore */ }
+      }
+
+      // Set canvas to real video dimensions
+      cameraCanvas.width = cameraVideo.videoWidth || 1280;
+      cameraCanvas.height = cameraVideo.videoHeight || 960;
+
+      const ctx = cameraCanvas.getContext('2d');
+      ctx.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+
+      // Convert captured frame to Blob and File
+      cameraCanvas.toBlob((blob) => {
+        if (!blob) {
+          showToast('Gagal memproses gambar');
+          return;
+        }
+
+        const now = new Date();
+        const timestamp = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+        const capturedFile = new File([blob], `label_kamera_${timestamp}.jpg`, { type: 'image/jpeg' });
+
+        handleFileSelected(capturedFile, 'Kamera Langsung');
+        stopCamera();
+        switchTab('upload');
+        showToast('Foto label berhasil dipotret');
+      }, 'image/jpeg', 0.95);
+    });
+  }
+
+  // ═══════════════════════════════════════
+  // 5. FILE DRAG & DROP AND SELECTION
   // ═══════════════════════════════════════
   dropzone.addEventListener('click', () => fileInput.click());
 
@@ -118,13 +312,13 @@ document.addEventListener('DOMContentLoaded', () => {
   dropzone.addEventListener('drop', (e) => {
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleFileSelected(files[0]);
+      handleFileSelected(files[0], 'Unggahan Berkas');
     }
   });
 
   fileInput.addEventListener('change', () => {
     if (fileInput.files && fileInput.files.length > 0) {
-      handleFileSelected(fileInput.files[0]);
+      handleFileSelected(fileInput.files[0], 'Unggahan Berkas');
     }
   });
 
@@ -137,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (item.kind === 'file' && item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
-          handleFileSelected(file);
+          handleFileSelected(file, 'Papan Klip');
           showToast('Gambar berhasil ditempel dari papan klip');
           break;
         }
@@ -158,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  function handleFileSelected(file) {
+  function handleFileSelected(file, sourceLabel = 'Unggahan') {
     if (!file.type.match(/^image\/(jpeg|png|webp)$/i)) {
       alert('Format berkas tidak didukung. Harap pilih gambar JPEG, PNG, atau WebP.');
       return;
@@ -177,10 +371,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const img = new Image();
       img.onload = () => {
         const sizeKb = (file.size / 1024).toFixed(1);
-        previewMeta.textContent = `Resolusi: ${img.width}×${img.height} px | Nama: ${file.name || 'Pasted Image'} | Ukuran: ${sizeKb} KB`;
+        previewMeta.textContent = `Resolusi: ${img.width}×${img.height} px | Nama: ${file.name || 'Foto'} | Ukuran: ${sizeKb} KB`;
+        if (previewSourceBadge) previewSourceBadge.textContent = sourceLabel;
+        
         previewContainer.classList.add('active');
         btnExtract.disabled = false;
         dropzone.style.display = 'none';
+
+        // Show mobile floating action bar
+        if (mobileFloatingBar) {
+          mobileFloatingBar.classList.add('active');
+          if (mobileFloatingText) mobileFloatingText.textContent = file.name || 'Foto siap diekstrak';
+        }
       };
       img.src = e.target.result;
     };
@@ -195,12 +397,16 @@ document.addEventListener('DOMContentLoaded', () => {
     previewContainer.classList.remove('active');
     dropzone.style.display = 'flex';
     btnExtract.disabled = true;
+
+    if (mobileFloatingBar) {
+      mobileFloatingBar.classList.remove('active');
+    }
   }
 
   btnRemovePreview.addEventListener('click', clearPreview);
 
   // ═══════════════════════════════════════
-  // 4. PIPELINE STAGES ANIMATION
+  // 6. PIPELINE STAGES ANIMATION
   // ═══════════════════════════════════════
   const steps = [
     { id: 'step-detection', name: 'Tahap 1: Deteksi Area Tabel (Roboflow Vision)' },
@@ -255,17 +461,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ═══════════════════════════════════════
-  // 5. RUN EXTRACTION PIPELINE
+  // 7. RUN EXTRACTION PIPELINE
   // ═══════════════════════════════════════
-  btnExtract.addEventListener('click', async () => {
+  async function executeExtraction() {
     if (!currentFile) return;
 
     // Set UI processing state
     btnExtract.disabled = true;
+    if (btnExtractMobile) btnExtractMobile.disabled = true;
+    if (mobileFloatingBar) mobileFloatingBar.classList.remove('active');
+
     emptyState.style.display = 'none';
     resultsContainer.classList.remove('active');
     loadingState.classList.add('active');
     startPipelineAnimation();
+
+    // Scroll to results panel on mobile for instant visibility
+    if (window.innerWidth < 1040) {
+      resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     const formData = new FormData();
     formData.append('file', currentFile);
@@ -286,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       displayResults(result);
-      showToast('Informasi nilai gizi berhasil diekstrak.');
+      showToast('Informasi nilai gizi berhasil diekstrak');
 
     } catch (err) {
       completePipelineAnimation();
@@ -295,11 +509,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       loadingState.classList.remove('active');
       btnExtract.disabled = false;
+      if (btnExtractMobile) btnExtractMobile.disabled = false;
     }
-  });
+  }
+
+  btnExtract.addEventListener('click', executeExtraction);
+  if (btnExtractMobile) {
+    btnExtractMobile.addEventListener('click', executeExtraction);
+  }
 
   // ═══════════════════════════════════════
-  // 6. RENDER RESULTS STATE
+  // 8. RENDER RESULTS STATE
   // ═══════════════════════════════════════
   function displayResults(res) {
     resultsContainer.classList.add('active');
@@ -386,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ═══════════════════════════════════════
-  // 7. SEARCH & FILTER NUTRIENT TABLE
+  // 9. SEARCH & FILTER NUTRIENT TABLE
   // ═══════════════════════════════════════
   function filterNutrientRows(query) {
     const q = query.toLowerCase().trim();
@@ -404,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ═══════════════════════════════════════
-  // 8. ACCORDION LOGIC & ACCESSIBILITY (R-32)
+  // 10. ACCORDION LOGIC & ACCESSIBILITY (R-32)
   // ═══════════════════════════════════════
   document.querySelectorAll('.accordion-header').forEach(header => {
     header.addEventListener('click', () => {
@@ -427,13 +647,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ═══════════════════════════════════════
-  // 9. COPY & EXPORT ACTIONS
+  // 11. EXPORT & CLIPBOARD ACTIONS
   // ═══════════════════════════════════════
   const btnCopyOcr = document.getElementById('btnCopyOcr');
   if (btnCopyOcr) {
     btnCopyOcr.addEventListener('click', () => {
       const text = document.getElementById('rawOcrText').textContent;
-      copyToClipboard(text, 'Teks hasil OCR berhasil disalin.');
+      copyToClipboard(text, 'Teks hasil OCR berhasil disalin');
     });
   }
 
@@ -441,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnCopyJson) {
     btnCopyJson.addEventListener('click', () => {
       const text = document.getElementById('rawJsonText').textContent;
-      copyToClipboard(text, 'Data JSON berhasil disalin.');
+      copyToClipboard(text, 'Data JSON berhasil disalin');
     });
   }
 
@@ -456,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
       a.download = `nutrition_facts_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Berkas JSON berhasil diunduh.');
+      showToast('Berkas JSON berhasil diunduh');
     });
   }
 
@@ -474,12 +694,12 @@ document.addEventListener('DOMContentLoaded', () => {
       (nd.nutrients || []).forEach(n => {
         summary += `- ${n.name}: ${n.amount_per_serving || '-'} (% AKG: ${n.percent_daily_value || '-'})\n`;
       });
-      copyToClipboard(summary, 'Ringkasan nutrisi disalin ke papan klip.');
+      copyToClipboard(summary, 'Ringkasan nutrisi disalin ke papan klip');
     });
   }
 
   // ═══════════════════════════════════════
-  // 10. ERROR HANDLING & NOTIFICATIONS
+  // 12. ERROR & FEEDBACK UTILITIES
   // ═══════════════════════════════════════
   function showError(msg) {
     emptyState.style.display = 'none';
@@ -490,11 +710,10 @@ document.addEventListener('DOMContentLoaded', () => {
     warningBox.querySelector('.alert-title').textContent = 'Kegagalan Proses Ekstraksi';
     warningBox.querySelector('.alert-text').textContent = msg;
 
-    // Reset metric indicators
     document.getElementById('metricEngine').textContent = 'N/A';
     document.getElementById('metricOcrConf').textContent = 'N/A';
     document.getElementById('metricDetConf').textContent = 'N/A';
-    document.getElementById('nutrientsTableBody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--red-600); padding: 24px;">Tidak dapat mengekstrak data nutrisi dari berkas ini.</td></tr>`;
+    document.getElementById('nutrientsTableBody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--rose-500); padding: 24px;">Tidak dapat mengekstrak data nutrisi dari berkas ini.</td></tr>`;
   }
 
   function copyToClipboard(text, message) {
