@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍎 Nutrition Facts Extractor — AI Vision & Extraction</title>
+  <meta name="description" content="Ekstrak informasi nilai gizi (Nutrition Facts) dari kemasan produk makanan/minuman secara otomatis menggunakan deteksi Roboflow, OCR, dan Gemini Flash.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>🍎</text></svg>">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- ═══════════════════════════════════════
+         HEADER / NAVBAR
+         ═══════════════════════════════════════ -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">🍎</div>
+        <div>
+          <h1 class="brand-title">Nutrition Facts Extractor</h1>
+          <p class="brand-tagline">AI-Powered Nutrition Label Parser (Roboflow • PaddleOCR • Gemini)</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="backendStatus" class="status-badge">
+          <span class="status-dot"></span> Memeriksa Backend...
+        </div>
+        <a href="/docs" target="_blank" class="btn-ghost-icon" title="Buka Swagger API Documentation">
+          <span>📖</span> API Docs
+        </a>
+      </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════
+         MAIN GRID (Split Layout)
+         ═══════════════════════════════════════ -->
+    <main class="main-grid">
+
+      <!-- LEFT COLUMN: Input & Upload -->
+      <section class="glass-card">
+        <div class="panel-header">
+          <h2 class="panel-title">📷 Upload Gambar Kemasan</h2>
+          <p class="panel-subtitle">Pilih atau drag & drop foto label Informasi Nilai Gizi produk.</p>
+        </div>
+
+        <!-- Dropzone -->
+        <div id="uploadDropzone" class="upload-dropzone">
+          <div class="upload-icon-wrapper">📸</div>
+          <div class="upload-heading">Seret gambar ke sini atau klik untuk browse</div>
+          <p class="upload-subtext">Mendukung clipboard paste (<kbd style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">Ctrl+V</kbd>)</p>
+          <span class="upload-badge-formats">JPG • PNG • WEBP (Max 10MB)</span>
+          <input type="file" id="fileInput" class="hidden-file-input" accept="image/jpeg,image/png,image/webp">
+        </div>
+
+        <!-- Preview Card -->
+        <div id="previewContainer" class="preview-container">
+          <div class="preview-card">
+            <button type="button" id="btnRemovePreview" class="btn-remove-preview" title="Hapus gambar">✕</button>
+            <img id="previewImage" class="preview-image" alt="Preview Gambar Kemasan">
+            <div id="previewMeta" class="preview-meta">-</div>
+          </div>
+        </div>
+
+        <!-- Primary Submit Button -->
+        <button type="button" id="btnExtract" class="btn-primary" disabled>
+          <span>🚀</span> Ekstrak Nutrition Facts
+        </button>
+
+        <!-- Pipeline Architecture Explainer -->
+        <div class="pipeline-card">
+          <div class="pipeline-card-title">
+            <span>Pipeline Ekstraksi AI</span>
+            <span style="font-size: 0.72rem; color: var(--emerald-400);">4 Tahap</span>
+          </div>
+          <ul class="pipeline-steps-list">
+            <li id="step-detection" class="step-item">
+              <span class="step-icon">1</span>
+              <div class="step-content">
+                <div class="step-name">Detection — Roboflow</div>
+                <div class="step-desc">Deteksi bounding box area tabel nutrisi</div>
+              </div>
+            </li>
+            <li id="step-crop" class="step-item">
+              <span class="step-icon">2</span>
+              <div class="step-content">
+                <div class="step-name">Crop & Preprocess — OpenCV</div>
+                <div class="step-desc">Pemotongan tabel + adaptive thresholding</div>
+              </div>
+            </li>
+            <li id="step-ocr" class="step-item">
+              <span class="step-icon">3</span>
+              <div class="step-content">
+                <div class="step-name">OCR — PaddleOCR / EasyOCR</div>
+                <div class="step-desc">Ekstraksi teks multibahasa (ID & EN)</div>
+              </div>
+            </li>
+            <li id="step-llm" class="step-item">
+              <span class="step-icon">4</span>
+              <div class="step-content">
+                <div class="step-name">LLM Parsing — Gemini Flash</div>
+                <div class="step-desc">Koreksi typo & rekonstruksi JSON terstruktur</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Output & Results -->
+      <section class="glass-card">
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">🥗</div>
+          <h3 class="empty-title">Belum Ada Gambar yang Diproses</h3>
+          <p class="empty-desc">
+            Upload gambar kemasan di sisi kiri, lalu klik <strong>"Ekstrak Nutrition Facts"</strong> untuk memulai ekstraksi otomatis.
+          </p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+          <div class="spinner-ai"></div>
+          <h3 class="loading-title">Memproses Gambar Melalui Pipeline AI...</h3>
+          <p class="loading-subtitle">
+            Sistem sedang menjalankan deteksi, OCR, dan rekonstruksi teks dengan Gemini. Proses biasanya memakan waktu 10-25 detik.
+          </p>
+        </div>
+
+        <!-- Results State -->
+        <div id="resultsContainer" class="results-container">
+          
+          <!-- Warning Banner (Dynamic) -->
+          <div id="warningBanner" class="alert-banner warning" style="display: none;">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-text"></div>
+          </div>
+
+          <!-- Pipeline Metrics Row -->
+          <div class="metrics-row">
+            <div class="metric-card">
+              <div class="metric-label"><span>🔧</span> OCR Engine</div>
+              <div id="metricEngine" class="metric-value"><span class="metric-badge">PaddleOCR</span></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label"><span>📖</span> OCR Confidence</div>
+              <div id="metricOcrConf" class="metric-value" style="color: var(--cyan-400);">-</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label"><span>🔍</span> Detection Conf.</div>
+              <div id="metricDetConf" class="metric-value" style="color: var(--violet-400);">-</div>
+            </div>
+          </div>
+
+          <!-- Nutrition Hero Card -->
+          <div class="nutrition-hero-card">
+            <div id="productNameTag" class="product-tag" style="display: none;">🏷️ -</div>
+            <div class="hero-stats-grid">
+              <div class="hero-stat-item">
+                <div class="hero-stat-label">🍽️ Takaran Saji</div>
+                <div id="valServingSize" class="hero-stat-value">-</div>
+              </div>
+              <div class="hero-stat-item">
+                <div class="hero-stat-label">📦 Sajian per Kemasan</div>
+                <div id="valServingsPerPkg" class="hero-stat-value">-</div>
+              </div>
+              <div class="hero-stat-item calories-hero">
+                <div class="hero-stat-label">🔥 Energi Total / Kalori</div>
+                <div id="valCalories" class="hero-stat-value">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nutrients Table Section -->
+          <div class="table-section">
+            <div class="table-toolbar">
+              <h3 class="table-title"><span>📋</span> Rincian Nilai Gizi</h3>
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="nutrientSearchInput" class="search-input" placeholder="Cari nutrisi (misal: Gula, Lemak)...">
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="nutrition-table">
+                <thead>
+                  <tr>
+                    <th>Nutrisi</th>
+                    <th>Jumlah per Sajian</th>
+                    <th>% AKG / % DV</th>
+                  </tr>
+                </thead>
+                <tbody id="nutrientsTableBody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Collapsible Accordions: Raw OCR & Raw JSON -->
+          <div class="accordion-group">
+            
+            <!-- Raw OCR Accordion -->
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <div class="accordion-title">
+                  <span>📝</span> Lihat Raw OCR Text
+                </div>
+                <span class="accordion-chevron">▼</span>
+              </div>
+              <div class="accordion-body">
+                <div class="code-wrapper">
+                  <button type="button" id="btnCopyOcr" class="btn-copy-code">Copy</button>
+                  <pre id="rawOcrText" class="code-block"></pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Raw JSON Accordion -->
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <div class="accordion-title">
+                  <span>📦</span> Lihat Raw JSON Response
+                </div>
+                <span class="accordion-chevron">▼</span>
+              </div>
+              <div class="accordion-body">
+                <div class="code-wrapper">
+                  <button type="button" id="btnCopyJson" class="btn-copy-code">Copy</button>
+                  <pre id="rawJsonText" class="code-block"></pre>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Action Toolbar -->
+          <div class="action-toolbar">
+            <button type="button" id="btnDownloadJson" class="btn-secondary">
+              <span>💾</span> Unduh JSON
+            </button>
+            <button type="button" id="btnCopySummary" class="btn-secondary">
+              <span>📋</span> Salin Ringkasan Nutrisi
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="toast-notification"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

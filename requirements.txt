@@ -1,0 +1,24 @@
+# Core
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+
+# Image Processing
+Pillow>=10.0.0
+opencv-python-headless>=4.8.0
+
+# Detection
+inference-sdk>=0.28.0
+
+# OCR
+paddlepaddle>=2.6.0
+paddleocr>=2.8.0
+easyocr>=1.7.0
+
+# LLM
+google-genai>=1.0.0
+pydantic>=2.0.0
+
+# Web UI (Served directly by FastAPI)
+# No separate frontend dependencies required
