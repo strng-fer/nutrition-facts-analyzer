@@ -31,8 +31,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Preview Elements
   const previewContainer = document.getElementById('previewContainer');
+  const previewCard = document.getElementById('previewCard');
+  const previewStatusPill = document.getElementById('previewStatusPill');
+  const previewViewTabs = document.getElementById('previewViewTabs');
+  const btnViewBbox = document.getElementById('btnViewBbox');
+  const btnViewCrop = document.getElementById('btnViewCrop');
+  const btnViewOriginal = document.getElementById('btnViewOriginal');
+  const previewImageWrapper = document.getElementById('previewImageWrapper');
   const previewImage = document.getElementById('previewImage');
+  const previewScanOverlay = document.getElementById('previewScanOverlay');
+  const scanStatusText = document.getElementById('scanStatusText');
+  const previewActiveBadge = document.getElementById('previewActiveBadge');
   const previewMeta = document.getElementById('previewMeta');
+  const previewDetBadge = document.getElementById('previewDetBadge');
   const previewSourceBadge = document.getElementById('previewSourceBadge');
   const btnRemovePreview = document.getElementById('btnRemovePreview');
 
@@ -58,6 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // State Variables
   let currentFile = null;
   let currentResult = null;
+  let currentRawDataUrl = null;
+  let currentAnnotatedDataUrl = null;
+  let currentCroppedDataUrl = null;
+  let currentActiveView = 'bbox'; // 'bbox' | 'crop' | 'original'
   let stepTimer = null;
   let cameraStream = null;
   let currentFacingMode = 'environment'; // Default rear camera for scanning packages
@@ -352,6 +367,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ═══════════════════════════════════════
+  // 5.1 PREVIEW VIEW MODE SWITCHER (BBOX / CROP / ORIGINAL)
+  // ═══════════════════════════════════════
+  function setPreviewView(mode) {
+    currentActiveView = mode;
+
+    if (btnViewBbox) {
+      btnViewBbox.classList.toggle('active', mode === 'bbox');
+      btnViewBbox.setAttribute('aria-selected', mode === 'bbox');
+    }
+    if (btnViewCrop) {
+      btnViewCrop.classList.toggle('active', mode === 'crop');
+      btnViewCrop.setAttribute('aria-selected', mode === 'crop');
+    }
+    if (btnViewOriginal) {
+      btnViewOriginal.classList.toggle('active', mode === 'original');
+      btnViewOriginal.setAttribute('aria-selected', mode === 'original');
+    }
+
+    if (mode === 'bbox') {
+      previewImage.src = currentAnnotatedDataUrl || currentRawDataUrl;
+      if (previewActiveBadge) {
+        previewActiveBadge.textContent = currentAnnotatedDataUrl
+          ? '🎯 Bounding Box YOLOv8'
+          : '⚠️ Citra Penuh (Tanpa BBox)';
+      }
+    } else if (mode === 'crop') {
+      previewImage.src = currentCroppedDataUrl || currentRawDataUrl;
+      if (previewActiveBadge) {
+        previewActiveBadge.textContent = currentCroppedDataUrl
+          ? '✂️ Hasil Crop Tabel'
+          : '🖼️ Foto Asli';
+      }
+    } else {
+      previewImage.src = currentRawDataUrl;
+      if (previewActiveBadge) {
+        previewActiveBadge.textContent = '🖼️ Foto Asli';
+      }
+    }
+  }
+
+  if (btnViewBbox) {
+    btnViewBbox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPreviewView('bbox');
+    });
+  }
+  if (btnViewCrop) {
+    btnViewCrop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPreviewView('crop');
+    });
+  }
+  if (btnViewOriginal) {
+    btnViewOriginal.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPreviewView('original');
+    });
+  }
+
+  // Klik area gambar untuk langsung memilih atau mengganti foto baru
+  if (previewImageWrapper) {
+    previewImageWrapper.addEventListener('click', (e) => {
+      if (e.target.closest('.preview-view-tab') || e.target.closest('#btnRemovePreview')) return;
+      fileInput.click();
+    });
+  }
+
+  // Dukungan seret & lepas berkas langsung ke area preview card
+  if (previewCard) {
+    ['dragenter', 'dragover'].forEach(name => {
+      previewCard.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        previewCard.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      previewCard.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        previewCard.classList.remove('dragover');
+      });
+    });
+
+    previewCard.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        handleFileSelected(files[0], 'Unggahan Berkas');
+      }
+    });
+  }
+
   function handleFileSelected(file, sourceLabel = 'Unggahan') {
     if (!file.type.match(/^image\/(jpeg|png|webp)$/i)) {
       alert('Format berkas tidak didukung. Harap pilih gambar JPEG, PNG, atau WebP.');
@@ -364,16 +473,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     currentFile = file;
+    currentAnnotatedDataUrl = null;
+    currentCroppedDataUrl = null;
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
-      previewImage.src = e.target.result;
+      currentRawDataUrl = e.target.result;
+      previewImage.src = currentRawDataUrl;
+
       const img = new Image();
       img.onload = () => {
         const sizeKb = (file.size / 1024).toFixed(1);
-        previewMeta.textContent = `Resolusi: ${img.width}×${img.height} px | Nama: ${file.name || 'Foto'} | Ukuran: ${sizeKb} KB`;
+        previewMeta.textContent = `${img.width}×${img.height} px | ${file.name || 'Foto'} (${sizeKb} KB)`;
         if (previewSourceBadge) previewSourceBadge.textContent = sourceLabel;
-        
+        if (previewStatusPill) {
+          previewStatusPill.className = 'preview-status-pill processing';
+          previewStatusPill.textContent = 'Memproses...';
+        }
+        if (previewDetBadge) previewDetBadge.style.display = 'none';
+
+        setPreviewView('original');
+
         previewContainer.classList.add('active');
         btnExtract.disabled = false;
         dropzone.style.display = 'none';
@@ -381,10 +502,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show mobile floating action bar
         if (mobileFloatingBar) {
           mobileFloatingBar.classList.add('active');
-          if (mobileFloatingText) mobileFloatingText.textContent = file.name || 'Foto siap diekstrak';
+          if (mobileFloatingText) mobileFloatingText.textContent = file.name || 'Menganalisis...';
         }
+
+        // ALUR KERJA OTOMATIS (Requirement 4): Langsung proses gambar saat dipilih
+        executeExtraction();
       };
-      img.src = e.target.result;
+      img.src = currentRawDataUrl;
     };
 
     reader.readAsDataURL(file);
@@ -392,6 +516,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearPreview() {
     currentFile = null;
+    currentResult = null;
+    currentRawDataUrl = null;
+    currentAnnotatedDataUrl = null;
+    currentCroppedDataUrl = null;
     fileInput.value = '';
     previewImage.src = '';
     previewContainer.classList.remove('active');
@@ -403,13 +531,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  btnRemovePreview.addEventListener('click', clearPreview);
+  btnRemovePreview.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
 
   // ═══════════════════════════════════════
   // 6. PIPELINE STAGES ANIMATION
   // ═══════════════════════════════════════
   const steps = [
-    { id: 'step-detection', name: 'Tahap 1: Deteksi Area Tabel (Roboflow Vision)' },
+    { id: 'step-detection', name: 'Tahap 1: Deteksi Area Tabel (YOLOv8 Kustom)' },
     { id: 'step-crop', name: 'Tahap 2: Pemotongan Citra & Normalisasi (OpenCV)' },
     { id: 'step-ocr', name: 'Tahap 3: Pembacaan Teks Label (PaddleOCR)' },
     { id: 'step-llm', name: 'Tahap 4: Restrukturisasi Nilai Gizi (Gemini Flash)' }
@@ -471,6 +602,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnExtractMobile) btnExtractMobile.disabled = true;
     if (mobileFloatingBar) mobileFloatingBar.classList.remove('active');
 
+    // Tampilkan laser scanning overlay langsung pada gambar preview
+    if (previewScanOverlay) previewScanOverlay.style.display = 'flex';
+    if (scanStatusText) scanStatusText.textContent = 'Mendeteksi dengan YOLOv8...';
+    if (previewStatusPill) {
+      previewStatusPill.className = 'preview-status-pill processing';
+      previewStatusPill.textContent = 'Memproses...';
+    }
+
     emptyState.style.display = 'none';
     resultsContainer.classList.remove('active');
     loadingState.classList.add('active');
@@ -494,9 +633,42 @@ document.addEventListener('DOMContentLoaded', () => {
       currentResult = result;
       completePipelineAnimation();
 
+      // Simpan asset visual yang dikembalikan oleh backend
+      currentAnnotatedDataUrl = result.annotated_image;
+      currentCroppedDataUrl = result.cropped_image;
+
       if (!response.ok || !result.success) {
+        if (result.annotated_image) {
+          setPreviewView('bbox');
+        }
         showError(result.error || `HTTP ${response.status}: Proses ekstraksi tidak berhasil.`);
         return;
+      }
+
+      // Perbarui visualisasi preview (Requirement 2 & 3)
+      if (result.annotated_image) {
+        // Tampilkan hasil deteksi bounding box secara default
+        setPreviewView('bbox');
+        if (previewStatusPill) {
+          previewStatusPill.className = 'preview-status-pill';
+          const confText = result.detection_confidence ? `${(result.detection_confidence * 100).toFixed(1)}%` : 'Terdeteksi';
+          previewStatusPill.textContent = `YOLOv8: ${confText}`;
+        }
+        if (previewDetBadge) {
+          previewDetBadge.style.display = 'inline-block';
+          previewDetBadge.textContent = `Deteksi YOLOv8: ${(result.detection_confidence * 100).toFixed(1)}%`;
+        }
+      } else {
+        // Fallback jika tidak terdeteksi
+        setPreviewView('original');
+        if (previewStatusPill) {
+          previewStatusPill.className = 'preview-status-pill processing';
+          previewStatusPill.textContent = 'YOLOv8: Citra Penuh';
+        }
+        if (previewDetBadge) {
+          previewDetBadge.style.display = 'inline-block';
+          previewDetBadge.textContent = 'Tabel tidak terdeteksi';
+        }
       }
 
       displayResults(result);
@@ -507,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showError('Gagal menghubungi server backend. Pastikan layanan aplikasi berjalan dengan baik.');
       console.error(err);
     } finally {
+      if (previewScanOverlay) previewScanOverlay.style.display = 'none';
       loadingState.classList.remove('active');
       btnExtract.disabled = false;
       if (btnExtractMobile) btnExtractMobile.disabled = false;

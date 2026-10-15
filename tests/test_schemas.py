@@ -99,3 +99,15 @@ class TestExtractionResult:
         """warnings should default to empty list."""
         result = ExtractionResult(success=True)
         assert result.warnings == []
+
+    def test_visual_detection_fields(self):
+        """annotated_image, cropped_image, and detection_model should be supported."""
+        result = ExtractionResult(
+            success=True,
+            detection_model="YOLOv8",
+            annotated_image="data:image/jpeg;base64,dummyannotated",
+            cropped_image="data:image/jpeg;base64,dummycrop",
+        )
+        assert result.detection_model == "YOLOv8"
+        assert result.annotated_image == "data:image/jpeg;base64,dummyannotated"
+        assert result.cropped_image == "data:image/jpeg;base64,dummycrop"

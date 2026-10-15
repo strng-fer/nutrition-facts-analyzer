@@ -19,5 +19,8 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 OCR_CONFIDENCE_THRESHOLD = 0.6   # Minimum avg confidence before fallback to EasyOCR
 IMAGE_UPSCALE_FACTOR = 2         # Upscale cropped image for better OCR accuracy
 
-# ─── Detection ───
-DETECTION_CONFIDENCE_THRESHOLD = 0.3  # Minimum detection confidence to accept bbox
+# ─── Detection (YOLOv8 & Roboflow Fallback) ───
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", str(BASE_DIR / "yolov8.pt"))
+DETECTION_CONFIDENCE_THRESHOLD = float(os.getenv("DETECTION_CONFIDENCE_THRESHOLD", "0.25"))

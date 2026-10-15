@@ -38,9 +38,9 @@
         <div class="brand-text-block">
           <div class="brand-title-row">
             <h1 class="brand-title">NutriScan Portal</h1>
-            <span class="brand-version-pill">v1.0 Vision</span>
+            <span class="brand-version-pill">v1.1 YOLOv8</span>
           </div>
-          <p class="brand-tagline">Ekstraksi Informasi Nilai Gizi Pangan : Roboflow, PaddleOCR, Gemini</p>
+          <p class="brand-tagline">Ekstraksi Informasi Nilai Gizi Pangan : YOLOv8, PaddleOCR, Gemini</p>
         </div>
       </div>
 
@@ -199,26 +199,73 @@
           </div>
         </div>
 
-        <!-- Selected Image Preview Container -->
+        <!-- Selected Image Preview Container (Overlays Dropzone / Space-Efficient) -->
         <div id="previewContainer" class="preview-container" aria-live="polite">
-          <div class="preview-card">
+          <div class="preview-card" id="previewCard">
+            <!-- Header bar with Detection Status & Change Photo Action -->
             <div class="preview-header">
               <div class="preview-tag-group">
-                <span class="preview-status-pill">Foto Siap Dianalisis</span>
+                <span id="previewStatusPill" class="preview-status-pill">YOLOv8 Vision</span>
                 <span id="previewSourceBadge" class="preview-source-badge">Unggahan</span>
               </div>
-              <button type="button" id="btnRemovePreview" class="btn-remove-preview" title="Hapus foto terpilih" aria-label="Hapus foto terpilih">
+              <button type="button" id="btnRemovePreview" class="btn-remove-preview" title="Ganti foto atau upload gambar baru" aria-label="Ganti foto">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
                 <span>Ganti Foto</span>
               </button>
             </div>
-            <div class="preview-image-wrapper">
-              <img id="previewImage" class="preview-image" alt="Pratinjau foto label nutrisi yang akan diekstrak">
+
+            <!-- View Switcher Tabs: Bounding Box vs Crop vs Original (Space-Saving) -->
+            <div class="preview-view-tabs" id="previewViewTabs" role="tablist" aria-label="Pilihan Tampilan Visualisasi">
+              <button type="button" id="btnViewBbox" class="preview-view-tab active" role="tab" aria-selected="true" title="Tampilkan Bounding Box YOLOv8">
+                <span class="view-tab-icon">🎯</span>
+                <span class="view-tab-label">Deteksi (BBox)</span>
+              </button>
+              <button type="button" id="btnViewCrop" class="preview-view-tab" role="tab" aria-selected="false" title="Tampilkan Hasil Crop Tabel Nutrisi">
+                <span class="view-tab-icon">✂️</span>
+                <span class="view-tab-label">Hasil Crop</span>
+              </button>
+              <button type="button" id="btnViewOriginal" class="preview-view-tab" role="tab" aria-selected="false" title="Tampilkan Foto Asli">
+                <span class="view-tab-icon">🖼️</span>
+                <span class="view-tab-label">Foto Asli</span>
+              </button>
             </div>
-            <div id="previewMeta" class="preview-meta font-mono">-</div>
+
+            <!-- Image Viewport with Scanning Overlay & Click-to-Change -->
+            <div class="preview-image-wrapper" id="previewImageWrapper" role="button" tabindex="0" title="Klik atau seret gambar baru ke sini untuk langsung menganalisis">
+              <img id="previewImage" class="preview-image" alt="Pratinjau foto label nutrisi">
+              
+              <!-- Scanning Processing Laser & Status Overlay -->
+              <div id="previewScanOverlay" class="preview-scan-overlay" style="display: none;">
+                <div class="scan-laser-line" aria-hidden="true"></div>
+                <div class="scan-status-badge">
+                  <div class="spinner-small" aria-hidden="true"></div>
+                  <span id="scanStatusText">Mendeteksi dengan YOLOv8...</span>
+                </div>
+              </div>
+
+              <!-- Re-upload Click Hint Overlay -->
+              <div class="preview-hover-hint" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>Klik atau seret foto baru untuk analisis langsung</span>
+              </div>
+
+              <!-- Badge overlay on image for active view -->
+              <div id="previewActiveBadge" class="preview-active-badge">🎯 Bounding Box YOLOv8</div>
+            </div>
+
+            <!-- Meta / Quality Info -->
+            <div class="preview-footer-row">
+              <div id="previewMeta" class="preview-meta font-mono">-</div>
+              <div id="previewDetBadge" class="preview-det-badge font-mono" style="display: none;"></div>
+            </div>
           </div>
         </div>
 
@@ -240,8 +287,8 @@
             <li id="step-detection" class="step-item">
               <span class="step-num" aria-hidden="true">1</span>
               <div class="step-content">
-                <div class="step-name">Deteksi Area Nutrisi (Roboflow Vision)</div>
-                <div class="step-desc">Identifikasi batas bounding box tabel nutrisi pada kemasan</div>
+                <div class="step-name">Deteksi Area Nutrisi (YOLOv8 Kustom)</div>
+                <div class="step-desc">Identifikasi batas bounding box tabel nutrisi via model yolov8.pt</div>
               </div>
             </li>
             <li id="step-crop" class="step-item">
@@ -371,7 +418,7 @@
                   <circle cx="11" cy="11" r="8"/>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <span>Keyakinan Deteksi</span>
+                <span>Keyakinan YOLOv8</span>
               </div>
               <div id="metricDetConf" class="metric-value font-mono">-</div>
             </div>
@@ -518,7 +565,7 @@
         <span>Akurasi Berdasarkan Standar BPOM RI & USDA</span>
       </div>
       <div class="footer-right">
-        <span>Kombinasi YOLO Roboflow, PaddleOCR, dan LLM Gemini</span>
+        <span>Kombinasi YOLOv8 Custom Model, PaddleOCR, dan LLM Gemini</span>
       </div>
     </footer>
 

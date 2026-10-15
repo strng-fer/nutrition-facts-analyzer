@@ -4,7 +4,7 @@ FastAPI Backend — Nutrition Facts Extraction API.
 Main pipeline endpoint: POST /extract-nutrition
 Accepts an image upload and returns structured NutritionFacts JSON.
 
-Pipeline: Detection → Crop → Preprocess → OCR → LLM → Validated JSON
+Pipeline: Detection (YOLOv8) → Crop & Preprocess (OpenCV) → OCR (PaddleOCR) → LLM (Gemini) → Validated JSON
 """
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,8 +13,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from PIL import Image
 from pathlib import Path
 import io
-import tempfile
-import os
+import base64
 import logging
 
 from app.schemas import ExtractionResult
@@ -40,10 +39,10 @@ app = FastAPI(
     title="🍎 Nutrition Facts Extractor API",
     description=(
         "Ekstrak informasi nilai gizi dari gambar kemasan produk.\n\n"
-        "Pipeline: Detection (Roboflow) → Crop (OpenCV) → OCR (PaddleOCR) → "
+        "Pipeline: Detection (YOLOv8 Kustom) → Crop (OpenCV) → OCR (PaddleOCR) → "
         "LLM Reconstruction (Gemini)"
     ),
-    version="1.0.0",
+    version="1.1.0",
 )
 
 # CORS — izinkan semua origin untuk development
@@ -63,6 +62,23 @@ if STATIC_DIR.exists():
 SUPPORTED_FORMATS = {"image/jpeg", "image/png", "image/webp"}
 
 
+def image_to_base64_data_url(image: Image.Image, max_dim: int = 1200, quality: int = 85) -> str:
+    """Konversi PIL Image ke base64 data URL untuk ditransfer ke antarmuka web."""
+    img = image.copy()
+    w, h = img.size
+    if max(w, h) > max_dim:
+        scale = max_dim / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
+
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality)
+    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+    return f"data:image/jpeg;base64,{b64}"
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     """Serve the interactive single-page Web UI."""
@@ -80,12 +96,12 @@ async def extract_nutrition(file: UploadFile = File(...)):
     **Input:** Gambar kemasan produk (JPEG/PNG/WebP) via multipart upload.
 
     **Output:** JSON terstruktur berisi data nutrisi yang sudah diparsing,
-    lengkap dengan metadata pipeline (OCR engine, confidence scores, warnings).
+    visualisasi bounding box, crop tabel nutrisi, dan metadata pipeline.
 
     **Pipeline:**
-    1. **Detection** — Roboflow mendeteksi bounding box tabel nutrisi
+    1. **Detection** — YOLOv8 (yolov8.pt kustom) mendeteksi lokasi tabel nutrisi
     2. **Crop** — Pillow memotong area tabel + OpenCV preprocessing
-    3. **OCR** — PaddleOCR/EasyOCR mengekstrak teks dari gambar
+    3. **OCR** — PaddleOCR/EasyOCR mengekstrak teks dari gambar cropped
     4. **LLM** — Gemini merekonstruksi teks OCR menjadi JSON terstruktur
     """
     warnings: list[str] = []
@@ -110,37 +126,39 @@ async def extract_nutrition(file: UploadFile = File(...)):
         )
 
         # ═══════════════════════════════════════
-        # STEP 1: DETECTION (Roboflow)
+        # STEP 1: DETECTION (YOLOv8)
         # ═══════════════════════════════════════
-        # Roboflow SDK membutuhkan file path, bukan bytes
-        with tempfile.NamedTemporaryFile(
-            suffix=".jpg", delete=False
-        ) as tmp_file:
-            image.save(tmp_file, format="JPEG")
-            tmp_path = tmp_file.name
-
-        try:
-            bbox = detect_nutrition_table(tmp_path)
-        finally:
-            os.unlink(tmp_path)  # Bersihkan file temp
+        detection_result = detect_nutrition_table(image)
 
         detection_confidence = None
+        detection_model = "YOLOv8"
+        annotated_image_b64 = None
+        cropped_image_b64 = None
 
         # ═══════════════════════════════════════
         # STEP 2: CROP & PREPROCESS
         # ═══════════════════════════════════════
-        if bbox:
-            detection_confidence = bbox["confidence"]
-            cropped_image = crop_nutrition_area(image, bbox)
-            logger.info("✂️ Nutrition table detected and cropped.")
+        if detection_result:
+            detection_confidence = detection_result.get("confidence")
+            detection_model = detection_result.get("model", "YOLOv8")
+
+            # Ambil visualisasi bounding box jika ada
+            annotated_pil = detection_result.get("annotated_image")
+            if annotated_pil:
+                annotated_image_b64 = image_to_base64_data_url(annotated_pil)
+
+            cropped_image = crop_nutrition_area(image, detection_result)
+            cropped_image_b64 = image_to_base64_data_url(cropped_image)
+            logger.info("✂️ Nutrition table detected by YOLOv8 and cropped.")
         else:
             # FALLBACK: Tidak ada deteksi → gunakan full image
             warnings.append(
-                "Tabel nutrisi tidak terdeteksi oleh model Roboflow. "
+                "Tabel nutrisi tidak terdeteksi oleh model YOLOv8. "
                 "Menggunakan seluruh gambar untuk OCR (akurasi mungkin menurun)."
             )
             cropped_image = image
-            logger.warning("⚠️ No detection — using full image for OCR.")
+            cropped_image_b64 = image_to_base64_data_url(image)
+            logger.warning("⚠️ No YOLOv8 detection — using full image for OCR.")
 
         preprocessed = preprocess_for_ocr(cropped_image)
 
@@ -158,6 +176,12 @@ async def extract_nutrition(file: UploadFile = File(...)):
                     "atau gambar tidak mengandung teks tabel nutrisi. "
                     "Coba upload gambar dengan kualitas lebih tinggi."
                 ),
+                detection_confidence=(
+                    round(detection_confidence, 3) if detection_confidence else None
+                ),
+                detection_model=detection_model,
+                annotated_image=annotated_image_b64,
+                cropped_image=cropped_image_b64,
                 warnings=warnings,
             )
 
@@ -195,6 +219,9 @@ async def extract_nutrition(file: UploadFile = File(...)):
             detection_confidence=(
                 round(detection_confidence, 3) if detection_confidence else None
             ),
+            detection_model=detection_model,
+            annotated_image=annotated_image_b64,
+            cropped_image=cropped_image_b64,
             warnings=warnings,
         )
 
@@ -219,5 +246,6 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "nutrition-facts-extractor",
-        "version": "1.0.0",
+        "model": "YOLOv8",
+        "version": "1.1.0",
     }

@@ -72,7 +72,19 @@ class ExtractionResult(BaseModel):
     )
     detection_confidence: Optional[float] = Field(
         default=None,
-        description="Confidence score dari Roboflow detection (0.0 - 1.0)"
+        description="Confidence score dari deteksi YOLOv8 (0.0 - 1.0)"
+    )
+    detection_model: Optional[str] = Field(
+        default="YOLOv8",
+        description="Model deteksi yang digunakan (YOLOv8 atau Roboflow)"
+    )
+    annotated_image: Optional[str] = Field(
+        default=None,
+        description="Base64 data URL gambar dengan visualisasi bounding box deteksi"
+    )
+    cropped_image: Optional[str] = Field(
+        default=None,
+        description="Base64 data URL gambar hasil crop area tabel nutrisi"
     )
     warnings: List[str] = Field(
         default_factory=list,
