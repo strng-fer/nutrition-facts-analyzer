@@ -165,7 +165,13 @@ async def extract_nutrition(file: UploadFile = File(...)):
         # ═══════════════════════════════════════
         # STEP 3: OCR
         # ═══════════════════════════════════════
-        raw_text, ocr_confidence, engine_used = extract_text(preprocessed)
+        raw_text, ocr_confidence, engine_used, ocr_annotated_pil, ocr_lines_detail = extract_text(
+            preprocessed, raw_crop_image=cropped_image
+        )
+
+        ocr_annotated_image_b64 = None
+        if ocr_annotated_pil:
+            ocr_annotated_image_b64 = image_to_base64_data_url(ocr_annotated_pil)
 
         if not raw_text.strip():
             return ExtractionResult(
@@ -182,6 +188,8 @@ async def extract_nutrition(file: UploadFile = File(...)):
                 detection_model=detection_model,
                 annotated_image=annotated_image_b64,
                 cropped_image=cropped_image_b64,
+                ocr_annotated_image=ocr_annotated_image_b64,
+                ocr_lines_detail=ocr_lines_detail,
                 warnings=warnings,
             )
 
@@ -222,6 +230,8 @@ async def extract_nutrition(file: UploadFile = File(...)):
             detection_model=detection_model,
             annotated_image=annotated_image_b64,
             cropped_image=cropped_image_b64,
+            ocr_annotated_image=ocr_annotated_image_b64,
+            ocr_lines_detail=ocr_lines_detail,
             warnings=warnings,
         )
 

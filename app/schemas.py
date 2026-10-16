@@ -86,6 +86,14 @@ class ExtractionResult(BaseModel):
         default=None,
         description="Base64 data URL gambar hasil crop area tabel nutrisi"
     )
+    ocr_annotated_image: Optional[str] = Field(
+        default=None,
+        description="Base64 data URL gambar crop dengan visualisasi kotak deteksi OCR"
+    )
+    ocr_lines_detail: List[dict] = Field(
+        default_factory=list,
+        description="Daftar baris teks OCR beserta confidence score dan koordinat"
+    )
     warnings: List[str] = Field(
         default_factory=list,
         description="Peringatan non-fatal selama proses pipeline"

@@ -218,7 +218,7 @@
               </button>
             </div>
 
-            <!-- View Switcher Tabs: Bounding Box vs Crop vs Original (Space-Saving) -->
+            <!-- View Switcher Tabs: Bounding Box vs Crop vs Teks OCR vs Original (Space-Saving) -->
             <div class="preview-view-tabs" id="previewViewTabs" role="tablist" aria-label="Pilihan Tampilan Visualisasi">
               <button type="button" id="btnViewBbox" class="preview-view-tab active" role="tab" aria-selected="true" title="Tampilkan Bounding Box YOLOv8">
                 <span class="view-tab-icon">🎯</span>
@@ -227,6 +227,10 @@
               <button type="button" id="btnViewCrop" class="preview-view-tab" role="tab" aria-selected="false" title="Tampilkan Hasil Crop Tabel Nutrisi">
                 <span class="view-tab-icon">✂️</span>
                 <span class="view-tab-label">Hasil Crop</span>
+              </button>
+              <button type="button" id="btnViewOcr" class="preview-view-tab" role="tab" aria-selected="false" title="Tampilkan Hasil Teks yang Dideteksi OCR">
+                <span class="view-tab-icon">📝</span>
+                <span class="view-tab-label">Teks OCR</span>
               </button>
               <button type="button" id="btnViewOriginal" class="preview-view-tab" role="tab" aria-selected="false" title="Tampilkan Foto Asli">
                 <span class="view-tab-icon">🖼️</span>
@@ -237,7 +241,33 @@
             <!-- Image Viewport with Scanning Overlay & Click-to-Change -->
             <div class="preview-image-wrapper" id="previewImageWrapper" role="button" tabindex="0" title="Klik atau seret gambar baru ke sini untuk langsung menganalisis">
               <img id="previewImage" class="preview-image" alt="Pratinjau foto label nutrisi">
-              
+
+              <!-- OCR Detected Text Viewer Container (Tampilan Teks OCR) -->
+              <div id="previewOcrContainer" class="preview-ocr-container" style="display: none;">
+                <div class="preview-ocr-header">
+                  <div class="preview-ocr-title-group">
+                    <span class="preview-ocr-title">Teks Terdeteksi OCR</span>
+                    <span id="previewOcrEngineBadge" class="preview-ocr-engine-pill">EasyOCR</span>
+                  </div>
+                  <div class="preview-ocr-actions">
+                    <button type="button" id="btnToggleOcrVisual" class="btn-ocr-view-toggle" title="Ganti antara gambar kotak teks dan daftar baris teks">
+                      <span id="ocrToggleVisualIcon">🖼️</span>
+                      <span id="ocrToggleVisualLabel">Kotak BBox Citra</span>
+                    </button>
+                    <button type="button" id="btnCopyOcrInline" class="btn-ocr-copy" title="Salin teks OCR ke papan klip">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                      <span>Salin</span>
+                    </button>
+                  </div>
+                </div>
+                <div id="previewOcrTextLines" class="preview-ocr-lines font-mono" tabindex="0">
+                  <div class="preview-ocr-empty">Belum ada data teks OCR. Unggah gambar kemasan untuk memulai.</div>
+                </div>
+              </div>
+
               <!-- Scanning Processing Laser & Status Overlay -->
               <div id="previewScanOverlay" class="preview-scan-overlay" style="display: none;">
                 <div class="scan-laser-line" aria-hidden="true"></div>
@@ -295,7 +325,7 @@
               <span class="step-num" aria-hidden="true">2</span>
               <div class="step-content">
                 <div class="step-name">Crop & Normalisasi Citra (OpenCV)</div>
-                <div class="step-desc">Pemotongan terarah dan penyesuaian kontras adaptif</div>
+                <div class="step-desc">Normalisasi anti-glare, auto-deskew kemiringan, dan kontras CLAHE</div>
               </div>
             </li>
             <li id="step-ocr" class="step-item">

@@ -6,7 +6,13 @@ import pytest
 from PIL import Image
 import numpy as np
 
-from app.pipeline.cropper import crop_nutrition_area, preprocess_for_ocr
+from app.pipeline.cropper import (
+    crop_nutrition_area,
+    preprocess_for_ocr,
+    estimate_skew_angle,
+    deskew_image,
+    remove_glare_and_normalize,
+)
 
 
 class TestCropNutritionArea:
@@ -89,11 +95,18 @@ class TestPreprocessForOcr:
         assert result.shape[0] == 200  # height * 2
 
     def test_output_is_binary(self):
-        """After thresholding, output should only contain 0 and 255."""
+        """After thresholding with binarize=True, output should only contain 0 and 255."""
         image = self._create_test_image()
-        result = preprocess_for_ocr(image)
+        result = preprocess_for_ocr(image, binarize=True)
         unique_values = np.unique(result)
         assert all(v in [0, 255] for v in unique_values)
+
+    def test_output_is_natural_grayscale(self):
+        """By default, output is smooth grayscale without destructive binarization."""
+        image = self._create_test_image()
+        result = preprocess_for_ocr(image)
+        assert result.dtype == np.uint8
+        assert len(result.shape) == 2
 
     def test_handles_grayscale_input(self):
         """Should handle already-grayscale images."""
@@ -102,3 +115,34 @@ class TestPreprocessForOcr:
         result = preprocess_for_ocr(image)
         assert isinstance(result, np.ndarray)
         assert len(result.shape) == 2
+
+    def test_estimate_skew_angle_and_deskew(self):
+        """Tests that skew estimation and deskewing functions execute correctly."""
+        import cv2
+        h, w = 200, 400
+        canvas = np.ones((h, w), dtype=np.uint8) * 255
+        # Draw mock text lines
+        for y in range(40, 180, 40):
+            cv2.line(canvas, (30, y), (370, y), 0, 4)
+        # Rotate by -5 degrees
+        M = cv2.getRotationMatrix2D((w // 2, h // 2), -5.0, 1.0)
+        rotated = cv2.warpAffine(canvas, M, (w, h), borderValue=255)
+
+        angle = estimate_skew_angle(rotated)
+        assert isinstance(angle, float)
+        # Should detect a rotation near 5 degrees
+        assert abs(angle - 5.0) < 2.0
+
+        deskewed = deskew_image(rotated, angle, keep_size=True)
+        assert deskewed.shape == rotated.shape
+
+    def test_remove_glare_and_normalize(self):
+        """Tests that glare suppression normalizes hotspot and enhances contrast."""
+        h, w = 150, 150
+        base = np.ones((h, w), dtype=np.uint8) * 128
+        # Add glare hotspot in center
+        base[50:100, 50:100] = 255
+        normalized = remove_glare_and_normalize(base)
+        assert isinstance(normalized, np.ndarray)
+        assert normalized.shape == (h, w)
+        assert normalized.dtype == np.uint8

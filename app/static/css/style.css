@@ -930,6 +930,7 @@ html[data-theme="light"] .theme-icon-light { display: inline-block; }
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   margin-bottom: 10px;
+  overflow-x: auto;
 }
 
 .preview-view-tab {
@@ -937,17 +938,25 @@ html[data-theme="light"] .theme-icon-light { display: inline-block; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 5px;
+  padding: 6px 6px;
   background: transparent;
   color: var(--text-muted);
   border: none;
   border-radius: calc(var(--radius-sm) - 2px);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .preview-view-tab {
+    font-size: 0.70rem;
+    padding: 5px 4px;
+    gap: 3px;
+  }
 }
 
 .preview-view-tab:hover {
@@ -986,6 +995,173 @@ html[data-theme="light"] .theme-icon-light { display: inline-block; }
 
 .preview-image-wrapper:hover .preview-image {
   filter: brightness(0.92);
+}
+
+/* ─── OCR Detected Text Viewer Container ─── */
+.preview-ocr-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #090e17;
+  border-radius: inherit;
+  z-index: 4;
+  overflow: hidden;
+  cursor: default;
+}
+
+.preview-ocr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.96);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.preview-ocr-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.preview-ocr-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  white-space: nowrap;
+}
+
+.preview-ocr-engine-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald-400);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.preview-ocr-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-ocr-view-toggle,
+.btn-ocr-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-ocr-view-toggle:hover,
+.btn-ocr-copy:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald-400);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.preview-ocr-lines {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  background: #090e17;
+}
+
+.preview-ocr-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 20px;
+  font-style: italic;
+  font-family: var(--font-sans);
+}
+
+.ocr-line-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all var(--transition-fast);
+}
+
+.ocr-line-row:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.ocr-line-num {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ocr-line-text {
+  flex: 1;
+  color: #e2e8f0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.ocr-line-conf {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ocr-line-conf.high {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.ocr-line-conf.mid {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ocr-line-conf.low {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 /* Active Badge on Image */

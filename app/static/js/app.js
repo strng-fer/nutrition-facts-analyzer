@@ -36,7 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewViewTabs = document.getElementById('previewViewTabs');
   const btnViewBbox = document.getElementById('btnViewBbox');
   const btnViewCrop = document.getElementById('btnViewCrop');
+  const btnViewOcr = document.getElementById('btnViewOcr');
   const btnViewOriginal = document.getElementById('btnViewOriginal');
+  const previewOcrContainer = document.getElementById('previewOcrContainer');
+  const previewOcrTextLines = document.getElementById('previewOcrTextLines');
+  const previewOcrEngineBadge = document.getElementById('previewOcrEngineBadge');
+  const btnToggleOcrVisual = document.getElementById('btnToggleOcrVisual');
+  const ocrToggleVisualIcon = document.getElementById('ocrToggleVisualIcon');
+  const ocrToggleVisualLabel = document.getElementById('ocrToggleVisualLabel');
+  const btnCopyOcrInline = document.getElementById('btnCopyOcrInline');
   const previewImageWrapper = document.getElementById('previewImageWrapper');
   const previewImage = document.getElementById('previewImage');
   const previewScanOverlay = document.getElementById('previewScanOverlay');
@@ -72,7 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentRawDataUrl = null;
   let currentAnnotatedDataUrl = null;
   let currentCroppedDataUrl = null;
-  let currentActiveView = 'bbox'; // 'bbox' | 'crop' | 'original'
+  let currentOcrAnnotatedDataUrl = null;
+  let currentOcrLinesDetail = [];
+  let currentRawOcrText = '';
+  let ocrVisualMode = 'text'; // 'text' | 'image'
+  let currentActiveView = 'bbox'; // 'bbox' | 'crop' | 'ocr' | 'original'
   let stepTimer = null;
   let cameraStream = null;
   let currentFacingMode = 'environment'; // Default rear camera for scanning packages
@@ -368,8 +380,47 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ═══════════════════════════════════════
-  // 5.1 PREVIEW VIEW MODE SWITCHER (BBOX / CROP / ORIGINAL)
+  // 5.1 PREVIEW VIEW MODE SWITCHER (BBOX / CROP / OCR / ORIGINAL)
   // ═══════════════════════════════════════
+  function renderOcrLines(lines, engineName) {
+    if (previewOcrEngineBadge) {
+      previewOcrEngineBadge.textContent = engineName || 'OCR Engine';
+    }
+
+    if (!previewOcrTextLines) return;
+
+    if (!lines || lines.length === 0) {
+      if (currentRawOcrText && currentRawOcrText.trim()) {
+        const splitLines = currentRawOcrText.split('\n').filter(l => l.trim());
+        previewOcrTextLines.innerHTML = splitLines.map((line, idx) => `
+          <div class="ocr-line-row">
+            <span class="ocr-line-num font-mono">${idx + 1}</span>
+            <span class="ocr-line-text">${escapeHtml(line)}</span>
+          </div>
+        `).join('');
+      } else {
+        previewOcrTextLines.innerHTML = '<div class="preview-ocr-empty">Belum ada data teks OCR. Unggah gambar kemasan untuk memulai.</div>';
+      }
+      return;
+    }
+
+    previewOcrTextLines.innerHTML = lines.map((item, idx) => {
+      const conf = typeof item.confidence === 'number' ? item.confidence : 0;
+      const confPct = Math.round(conf * 100);
+      let confClass = 'high';
+      if (conf < 0.5) confClass = 'low';
+      else if (conf < 0.75) confClass = 'mid';
+
+      return `
+        <div class="ocr-line-row">
+          <span class="ocr-line-num font-mono">${idx + 1}</span>
+          <span class="ocr-line-text">${escapeHtml(item.text || '')}</span>
+          <span class="ocr-line-conf ${confClass}" title="Tingkat Keyakinan OCR">${confPct}%</span>
+        </div>
+      `;
+    }).join('');
+  }
+
   function setPreviewView(mode) {
     currentActiveView = mode;
 
@@ -381,10 +432,41 @@ document.addEventListener('DOMContentLoaded', () => {
       btnViewCrop.classList.toggle('active', mode === 'crop');
       btnViewCrop.setAttribute('aria-selected', mode === 'crop');
     }
+    if (btnViewOcr) {
+      btnViewOcr.classList.toggle('active', mode === 'ocr');
+      btnViewOcr.setAttribute('aria-selected', mode === 'ocr');
+    }
     if (btnViewOriginal) {
       btnViewOriginal.classList.toggle('active', mode === 'original');
       btnViewOriginal.setAttribute('aria-selected', mode === 'original');
     }
+
+    if (mode === 'ocr') {
+      if (ocrVisualMode === 'image' && currentOcrAnnotatedDataUrl) {
+        if (previewOcrContainer) previewOcrContainer.style.display = 'none';
+        if (previewImage) {
+          previewImage.style.display = 'block';
+          previewImage.src = currentOcrAnnotatedDataUrl;
+        }
+        if (previewActiveBadge) {
+          previewActiveBadge.textContent = '📝 Citra Kotak Teks OCR';
+        }
+      } else {
+        if (previewImage) previewImage.style.display = 'none';
+        if (previewOcrContainer) {
+          previewOcrContainer.style.display = 'flex';
+          renderOcrLines(currentOcrLinesDetail, currentResult ? currentResult.ocr_engine_used : 'OCR');
+        }
+        if (previewActiveBadge) {
+          previewActiveBadge.textContent = '📝 Teks Terdeteksi OCR';
+        }
+      }
+      return;
+    }
+
+    // Default modes: hide OCR text container, show previewImage
+    if (previewOcrContainer) previewOcrContainer.style.display = 'none';
+    if (previewImage) previewImage.style.display = 'block';
 
     if (mode === 'bbox') {
       previewImage.src = currentAnnotatedDataUrl || currentRawDataUrl;
@@ -420,6 +502,12 @@ document.addEventListener('DOMContentLoaded', () => {
       setPreviewView('crop');
     });
   }
+  if (btnViewOcr) {
+    btnViewOcr.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPreviewView('ocr');
+    });
+  }
   if (btnViewOriginal) {
     btnViewOriginal.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -427,10 +515,59 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  if (btnToggleOcrVisual) {
+    btnToggleOcrVisual.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!currentOcrAnnotatedDataUrl && ocrVisualMode === 'text') {
+        showToast('Citra visual kotak OCR belum tersedia');
+        return;
+      }
+      ocrVisualMode = ocrVisualMode === 'text' ? 'image' : 'text';
+      if (ocrToggleVisualIcon && ocrToggleVisualLabel) {
+        if (ocrVisualMode === 'image') {
+          ocrToggleVisualIcon.textContent = '📄';
+          ocrToggleVisualLabel.textContent = 'Daftar Teks';
+        } else {
+          ocrToggleVisualIcon.textContent = '🖼️';
+          ocrToggleVisualLabel.textContent = 'Kotak BBox Citra';
+        }
+      }
+      setPreviewView('ocr');
+    });
+  }
+
+  if (btnCopyOcrInline) {
+    btnCopyOcrInline.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const textToCopy = currentRawOcrText || (currentResult && currentResult.raw_ocr_text) || '';
+      if (!textToCopy.trim()) {
+        showToast('Tidak ada teks untuk disalin');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        showToast('Teks OCR berhasil disalin');
+      } catch (err) {
+        showToast('Gagal menyalin teks');
+      }
+    });
+  }
+
+  // Cegah klik di dalam OCR container memicu pemilihan file
+  if (previewOcrContainer) {
+    previewOcrContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
   // Klik area gambar untuk langsung memilih atau mengganti foto baru
   if (previewImageWrapper) {
     previewImageWrapper.addEventListener('click', (e) => {
-      if (e.target.closest('.preview-view-tab') || e.target.closest('#btnRemovePreview')) return;
+      if (
+        e.target.closest('.preview-view-tab') ||
+        e.target.closest('#btnRemovePreview') ||
+        e.target.closest('#previewOcrContainer')
+      ) return;
       fileInput.click();
     });
   }
@@ -475,6 +612,23 @@ document.addEventListener('DOMContentLoaded', () => {
     currentFile = file;
     currentAnnotatedDataUrl = null;
     currentCroppedDataUrl = null;
+    currentOcrAnnotatedDataUrl = null;
+    currentOcrLinesDetail = [];
+    currentRawOcrText = '';
+    ocrVisualMode = 'text';
+    if (ocrToggleVisualIcon && ocrToggleVisualLabel) {
+      ocrToggleVisualIcon.textContent = '🖼️';
+      ocrToggleVisualLabel.textContent = 'Kotak BBox Citra';
+    }
+    if (previewOcrTextLines) {
+      previewOcrTextLines.innerHTML = '<div class="preview-ocr-empty">Sedang mengekstrak teks OCR...</div>';
+    }
+    if (previewOcrContainer) {
+      previewOcrContainer.style.display = 'none';
+    }
+    if (previewImage) {
+      previewImage.style.display = 'block';
+    }
 
     const reader = new FileReader();
 
@@ -520,8 +674,25 @@ document.addEventListener('DOMContentLoaded', () => {
     currentRawDataUrl = null;
     currentAnnotatedDataUrl = null;
     currentCroppedDataUrl = null;
+    currentOcrAnnotatedDataUrl = null;
+    currentOcrLinesDetail = [];
+    currentRawOcrText = '';
+    ocrVisualMode = 'text';
+    if (ocrToggleVisualIcon && ocrToggleVisualLabel) {
+      ocrToggleVisualIcon.textContent = '🖼️';
+      ocrToggleVisualLabel.textContent = 'Kotak BBox Citra';
+    }
+    if (previewOcrTextLines) {
+      previewOcrTextLines.innerHTML = '<div class="preview-ocr-empty">Belum ada data teks OCR. Unggah gambar kemasan untuk memulai.</div>';
+    }
+    if (previewOcrContainer) {
+      previewOcrContainer.style.display = 'none';
+    }
+    if (previewImage) {
+      previewImage.style.display = 'block';
+      previewImage.src = '';
+    }
     fileInput.value = '';
-    previewImage.src = '';
     previewContainer.classList.remove('active');
     dropzone.style.display = 'flex';
     btnExtract.disabled = true;
@@ -636,6 +807,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Simpan asset visual yang dikembalikan oleh backend
       currentAnnotatedDataUrl = result.annotated_image;
       currentCroppedDataUrl = result.cropped_image;
+      currentOcrAnnotatedDataUrl = result.ocr_annotated_image;
+      currentOcrLinesDetail = result.ocr_lines_detail || [];
+      currentRawOcrText = result.raw_ocr_text || '';
+      renderOcrLines(currentOcrLinesDetail, result.ocr_engine_used);
 
       if (!response.ok || !result.success) {
         if (result.annotated_image) {
